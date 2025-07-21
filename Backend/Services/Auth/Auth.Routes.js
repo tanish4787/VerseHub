@@ -7,6 +7,7 @@ import {
   verifyEmail,
   logoutUser,
 } from "./Auth.Conrollers.js";
+import { protectedRoute } from "./Auth.Middlewares.js";
 const router = express.Router();
 
 router
@@ -15,6 +16,6 @@ router
   .post("/forgot-password", forgotPassword)
   .put("/reset/:token", resetPassword)
   .post("/verify/:token", verifyEmail)
-  .post("/logout", logoutUser);
+  .post("/logout", protectedRoute, logoutUser);
 
 export default router;

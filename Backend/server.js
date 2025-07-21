@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import connectDB from "./Configs/db.js";
 import authRoutes from "./Services/Auth/Auth.Routes.js";
+import postsRoutes from './Services/Posts/Posts.Routes.js'
 
 dotenv.config();
 connectDB();
@@ -23,6 +24,7 @@ app.use(
   })
 );
 app.use("/api/auth", authRoutes);
+app.use("/api/posts", postsRoutes);
 
 app.use((err, req, res, next) => {
   res.status(500).send("Something broke!");
