@@ -4,7 +4,8 @@ import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import connectDB from "./Configs/db.js";
 import authRoutes from "./Services/Auth/Auth.Routes.js";
-import postsRoutes from './Services/Posts/Posts.Routes.js'
+import postsRoutes from "./Services/Posts/Posts.Routes.js";
+import userRoutes from "./Services/Users/User.Routes.js";
 
 dotenv.config();
 connectDB();
@@ -24,6 +25,7 @@ app.use(
   })
 );
 app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
 app.use("/api/posts", postsRoutes);
 
 app.use((err, req, res, next) => {
