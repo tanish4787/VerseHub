@@ -1,6 +1,9 @@
 import mongoose from "mongoose";
 import Post from "../../Models/Post.Model.js";
 import Clap from "../../Models/Clap.Model.js";
+import Notification from "../../Models/Notification.Model.js";
+
+
 
 export const addClap = async (req, res) => {
   try {
@@ -22,8 +25,17 @@ export const addClap = async (req, res) => {
     }
 
     await Clap.create({ post: postId, user: userId });
-
     await Post.findByIdAndUpdate(postId, { $inc: { clapsCount: 1 } });
+
+    if (String(post.author) !== String(userId)) {
+      await Notification.create({
+        recipient: post.author,
+        sourceUser: userId,
+        sourcePost: postId,
+        type: "new_clap",
+        message: `${req.user.name} clapped your post.`,
+      });
+    }
 
     return res.status(201).json({ message: "Clapped Successfully" });
   } catch (error) {

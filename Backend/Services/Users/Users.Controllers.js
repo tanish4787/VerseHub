@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import User from "../../Models/User.Model.js";
+import Notification from "../../Models/Notification.Model.js";
 
 export const getUser = async (req, res) => {
   const { userId } = req.params;
@@ -30,6 +31,8 @@ export const getUser = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+
 export const updateUserProfile = async (req, res) => {
   try {
     const { _id } = req.user;
@@ -62,6 +65,8 @@ export const updateUserProfile = async (req, res) => {
   }
 };
 
+
+
 export const followUser = async (req, res) => {
   try {
     const currentUserId = req.user._id;
@@ -77,16 +82,25 @@ export const followUser = async (req, res) => {
     if (!currentUser || !targetUser) {
       return res.status(404).json({ error: "User not found" });
     }
+
     if (currentUser.following.includes(targetUserId)) {
       return res
         .status(400)
         .json({ error: "You are already following this user." });
     }
+
     currentUser.following.push(targetUserId);
     targetUser.followers.push(currentUserId);
 
     await currentUser.save();
     await targetUser.save();
+
+    await Notification.create({
+      recipient: targetUserId,
+      sourceUser: currentUserId,
+      type: "new_follower",
+      message: `${currentUser.username} started following you.`,
+    });
 
     res.status(200).json({
       message: "Successfully followed the user",
@@ -98,6 +112,8 @@ export const followUser = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+
 
 export const unfollowUser = async (req, res) => {
   try {

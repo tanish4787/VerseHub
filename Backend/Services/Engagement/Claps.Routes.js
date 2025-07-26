@@ -8,3 +8,4 @@ router.delete("/:postId/clap", protectedRoute, removeClap);
 router.get("/:postId/claps", getPostClaps);
 
 export default router;
+

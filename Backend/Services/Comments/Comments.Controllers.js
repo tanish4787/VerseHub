@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import Post from "../../Models/Post.Model.js";
 import Comment from "../../Models/Comment.Model.js";
+import Notification from "../../Models/Notification.Model.js";
 
 export const addComment = async (req, res) => {
   try {
@@ -35,6 +36,16 @@ export const addComment = async (req, res) => {
 
     const savedComment = await newComment.save();
 
+    if (String(post.author) !== String(userId)) {
+      await Notification.create({
+        recipient: post.author,
+        sourceUser: userId,
+        sourcePost: postId,
+        type: "new_comment",
+        message: `${req.user.username} commented on your post.`,
+      });
+    }
+
     return res.status(201).json({
       message: "Comment added successfully",
       comment: savedComment,
@@ -44,7 +55,6 @@ export const addComment = async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 };
-
 
 const deleteCommentWithReplies = async (commentId) => {
   const replies = await Comment.find({ parentId: commentId });
@@ -74,12 +84,14 @@ export const deleteComment = async (req, res) => {
     const isPostAuthor = post && currentUserId === post.author.toString();
 
     if (!isCommentAuthor && !isPostAuthor) {
-      return res.status(403).json({ error: "Unauthorized to delete this comment" });
+      return res
+        .status(403)
+        .json({ error: "Unauthorized to delete this comment" });
     }
 
     await deleteCommentWithReplies(commentId);
 
-    res.status(204).send(); 
+    res.status(204).send();
   } catch (error) {
     console.error("Error deleting comment:", error);
     res.status(500).json({ error: "Internal server error" });
