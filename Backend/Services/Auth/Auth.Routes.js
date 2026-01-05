@@ -6,11 +6,13 @@ import {
   resetPassword,
   verifyEmail,
   logoutUser,
+  getMe,
 } from "./Auth.Conrollers.js";
 import { protectedRoute } from "./Auth.Middlewares.js";
 const router = express.Router();
 
 router
+  .get("/me", protectedRoute, getMe)
   .post("/register", registerUser)
   .post("/login", loginUser)
   .post("/forgot-password", forgotPassword)

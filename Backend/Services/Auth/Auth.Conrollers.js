@@ -6,9 +6,9 @@ import transporter from "../../Configs/emailConfig.js";
 
 export const registerUser = async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const { username, email, password } = req.body || {};
 
-    if (!username || !email || !password) {
+    if ((!username && !email) || !password) {
       return res.status(400).json({ error: "All fields are required." });
     }
     const existingUser = await User.findOne({ email });
@@ -41,8 +41,10 @@ export const registerUser = async (req, res) => {
       token,
     });
   } catch (error) {
-    console.log("Error: ", error);
-    res.status(400).json({ error: "Error while Registering." });
+    console.error("REGISTER ERROR:", error);
+    res.status(500).json({
+      error: error.message || "Registration failed",
+    });
   }
 };
 
@@ -128,7 +130,10 @@ export const resetPassword = async (req, res) => {
       return res.status(400).json({ error: "Password is required." });
     }
 
-    const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(resetToken)
+      .digest("hex");
 
     const user = await User.findOne({
       resetPasswordToken: hashedToken,
@@ -162,7 +167,6 @@ export const resetPassword = async (req, res) => {
     res.status(500).json({ error: "Server error during password reset." });
   }
 };
-
 
 export const verifyEmail = async (req, res) => {
   try {
@@ -201,7 +205,7 @@ export const logoutUser = async (req, res) => {
   try {
     res.clearCookie("token", {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production", 
+      secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
     });
 
@@ -209,5 +213,16 @@ export const logoutUser = async (req, res) => {
   } catch (error) {
     console.error("Logout error:", error);
     res.status(500).json({ error: "Failed to logout." });
+  }
+};
+export const getMe = async (req, res) => {
+  try {
+    res.status(200).json({
+      _id: req.user._id,
+      username: req.user.username,
+      email: req.user.email,
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch user" });
   }
 };
