@@ -4,34 +4,34 @@ import Notification from "../../Models/Notification.Model.js";
 
 export const getUser = async (req, res) => {
   const { userId } = req.params;
+
   try {
-    const user = mongoose.Types.ObjectId.isValid(userId)
-      ? await User.findById(userId).select(
-          "_id username email bio profilePicture followers following createdAt"
-        )
-      : null;
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ error: "Invalid User ID" });
+    }
+
+    const user = await User.findById(userId).select(
+      "_id username bio profilePicture followers following createdAt"
+    );
 
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    const response = {
+    return res.status(200).json({
       _id: user._id,
       username: user.username,
-      email: user.email,
       bio: user.bio,
       profilePicture: user.profilePicture,
       followers: user.followers.length,
       following: user.following.length,
       createdAt: user.createdAt,
-    };
-    res.status(200).json(response);
+    });
   } catch (error) {
     console.error("Error fetching user:", error);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 };
-
 
 export const updateUserProfile = async (req, res) => {
   try {
@@ -48,7 +48,7 @@ export const updateUserProfile = async (req, res) => {
 
     const updated = await user.save();
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "Profile updated successfully",
       user: {
         _id: updated._id,
@@ -61,94 +61,96 @@ export const updateUserProfile = async (req, res) => {
     });
   } catch (error) {
     console.error("Error updating profile:", error);
-    res.status(500).json({ error: "Server error" });
+    return res.status(500).json({ error: "Server error" });
   }
 };
 
+export const toggleFollow = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-
-export const followUser = async (req, res) => {
   try {
     const currentUserId = req.user._id;
     const targetUserId = req.params.userId;
 
-    if (currentUserId === targetUserId) {
+    if (!mongoose.Types.ObjectId.isValid(targetUserId)) {
+      return res.status(400).json({ error: "Invalid User ID" });
+    }
+
+    if (String(currentUserId) === String(targetUserId)) {
       return res.status(400).json({ error: "Prohibited" });
     }
 
-    const currentUser = await User.findById(currentUserId);
-    const targetUser = await User.findById(targetUserId);
+    const currentUser = await User.findById(currentUserId).session(session);
+    const targetUser = await User.findById(targetUserId).session(session);
 
     if (!currentUser || !targetUser) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    if (currentUser.following.includes(targetUserId)) {
-      return res
-        .status(400)
-        .json({ error: "You are already following this user." });
+    const isFollowing = currentUser.following.some(
+      (id) => String(id) === String(targetUserId)
+    );
+
+    let following;
+
+    if (isFollowing) {
+      await User.findByIdAndUpdate(
+        currentUserId,
+        { $pull: { following: targetUserId } },
+        { session }
+      );
+      await User.findByIdAndUpdate(
+        targetUserId,
+        { $pull: { followers: currentUserId } },
+        { session }
+      );
+      following = false;
+    } else {
+      await User.findByIdAndUpdate(
+        currentUserId,
+        { $addToSet: { following: targetUserId } },
+        { session }
+      );
+      await User.findByIdAndUpdate(
+        targetUserId,
+        { $addToSet: { followers: currentUserId } },
+        { session }
+      );
+      following = true;
+
+      await Notification.create(
+        [
+          {
+            recipient: targetUserId,
+            sourceUser: currentUserId,
+            type: "new_follower",
+            message: `${currentUser.username} started following you.`,
+          },
+        ],
+        { session }
+      );
     }
 
-    currentUser.following.push(targetUserId);
-    targetUser.followers.push(currentUserId);
+    const updatedCurrentUser = await User.findById(currentUserId).session(
+      session
+    );
+    const updatedTargetUser = await User.findById(targetUserId).session(
+      session
+    );
 
-    await currentUser.save();
-    await targetUser.save();
+    await session.commitTransaction();
+    session.endSession();
 
-    await Notification.create({
-      recipient: targetUserId,
-      sourceUser: currentUserId,
-      type: "new_follower",
-      message: `${currentUser.username} started following you.`,
-    });
-
-    res.status(200).json({
-      message: "Successfully followed the user",
-      followingCount: currentUser.following.length,
-      followersCount: targetUser.followers.length,
-    });
-  } catch (error) {
-    console.error("Error following user:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
-
-
-
-export const unfollowUser = async (req, res) => {
-  try {
-    const currentUserId = req.user._id;
-    const targetUserId = req.params.userId;
-
-    if (currentUserId === targetUserId) {
-      return res.status(400).json({ error: "Prohibited." });
-    }
-
-    const currentUser = await User.findById(currentUserId);
-    const targetUser = await User.findById(targetUserId);
-
-    if (!currentUser || !targetUser) {
-      return res.status(404).json({ error: "User not found" });
-    }
-    if (!currentUser.following.includes(targetUserId)) {
-      return res
-        .status(400)
-        .json({ error: "You are not following this user." });
-    }
-
-    currentUser.following.pull(targetUserId);
-    targetUser.followers.pull(currentUserId);
-
-    await currentUser.save();
-    await targetUser.save();
-
-    res.status(200).json({
-      message: "Successfully unfollowed the user",
-      followingCount: currentUser.following.length,
-      followersCount: targetUser.followers.length,
+    return res.status(200).json({
+      following,
+      followingCount: updatedCurrentUser.following.length,
+      followersCount: updatedTargetUser.followers.length,
     });
   } catch (error) {
-    console.error("Error unfollowing user:", error);
-    res.status(500).json({ error: "Internal server error" });
+    await session.abortTransaction();
+    session.endSession();
+    console.error("Error toggling follow:", error);
+    return res.status(500).json({ error: "Internal server error" });
   }
 };

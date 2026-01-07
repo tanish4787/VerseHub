@@ -1,4 +1,4 @@
-import { Box, Heading, Text } from "@chakra-ui/react";
+import { Box, Heading, Text, Badge } from "@chakra-ui/react";
 import { Link } from "react-router-dom";
 
 export default function PostCard({ post }) {
@@ -17,11 +17,17 @@ export default function PostCard({ post }) {
       </Link>
 
       <Text fontSize="sm" color="gray.600">
-        by {post.author?.username || "Unknown"}
+        by {post.authorInfo?.username || "Unknown"}
       </Text>
 
+      {post.isDraft &&(
+          <Badge colorScheme="yellow" mt="2">
+            Draft
+          </Badge>
+        )}
+
       <Text mt="2" noOfLines={3}>
-        {post.excerpt || ""}
+        {post.content}
       </Text>
     </Box>
   );

@@ -1,16 +1,25 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import dotenv from "dotenv";
 dotenv.config();
 
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: Number(process.env.EMAIL_PORT),
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+const transporter = {
+  sendMail: async ({ to, subject, html }) => {
+    try {
+      const data = await resend.emails.send({
+        from: process.env.EMAIL_FROM,
+        to,
+        subject,
+        html,
+      });
+
+      return data;
+    } catch (error) {
+      console.error("Resend email error:", error);
+      throw new Error("Email delivery failed");
+    }
   },
-});
+};
 
 export default transporter;

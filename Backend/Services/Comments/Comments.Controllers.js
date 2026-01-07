@@ -13,6 +13,10 @@ export const addComment = async (req, res) => {
       return res.status(400).json({ error: "Invalid Post ID" });
     }
 
+    if (!content || !content.trim()) {
+      return res.status(400).json({ error: "Comment content is required" });
+    }
+
     if (parentId && !mongoose.Types.ObjectId.isValid(parentId)) {
       return res.status(400).json({ error: "Invalid Parent Comment ID" });
     }
@@ -20,6 +24,13 @@ export const addComment = async (req, res) => {
     const post = await Post.findById(postId);
     if (!post) {
       return res.status(404).json({ error: "Post not found" });
+    }
+
+    if (parentId) {
+      const parentComment = await Comment.findById(parentId);
+      if (!parentComment || String(parentComment.post) !== String(postId)) {
+        return res.status(400).json({ error: "Invalid parent comment" });
+      }
     }
 
     const newComment = new Comment({
@@ -30,11 +41,13 @@ export const addComment = async (req, res) => {
         username: req.user.username,
         profilePicture: req.user.profilePicture,
       },
-      content,
+      content: content.trim(),
       parentId: parentId || null,
     });
 
     const savedComment = await newComment.save();
+
+    await Post.findByIdAndUpdate(postId, { $inc: { commentsCount: 1 } });
 
     if (String(post.author) !== String(userId)) {
       await Notification.create({
@@ -51,20 +64,23 @@ export const addComment = async (req, res) => {
       comment: savedComment,
     });
   } catch (error) {
-    console.error("Error adding comment: ", error);
+    console.error("Error adding comment:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 };
 
-const deleteCommentWithReplies = async (commentId) => {
-  const replies = await Comment.find({ parentId: commentId });
+const deleteCommentWithReplies = async (commentId, session) => {
+  const replies = await Comment.find({ parentId: commentId }).session(session);
   for (const reply of replies) {
-    await deleteCommentWithReplies(reply._id);
+    await deleteCommentWithReplies(reply._id, session);
   }
-  await Comment.findByIdAndDelete(commentId);
+  await Comment.findByIdAndDelete(commentId).session(session);
 };
 
 export const deleteComment = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const { commentId } = req.params;
 
@@ -72,14 +88,14 @@ export const deleteComment = async (req, res) => {
       return res.status(400).json({ error: "Invalid comment ID" });
     }
 
-    const comment = await Comment.findById(commentId);
+    const comment = await Comment.findById(commentId).session(session);
     if (!comment) {
       return res.status(404).json({ error: "Comment not found" });
     }
 
-    const currentUserId = req.user._id.toString();
+    const post = await Post.findById(comment.post).session(session);
 
-    const post = await Post.findById(comment.post);
+    const currentUserId = req.user._id.toString();
     const isCommentAuthor = currentUserId === comment.user.toString();
     const isPostAuthor = post && currentUserId === post.author.toString();
 
@@ -89,11 +105,22 @@ export const deleteComment = async (req, res) => {
         .json({ error: "Unauthorized to delete this comment" });
     }
 
-    await deleteCommentWithReplies(commentId);
+    await deleteCommentWithReplies(commentId, session);
 
-    res.status(204).send();
+    await Post.findByIdAndUpdate(
+      comment.post,
+      { $inc: { commentsCount: -1 } },
+      { session }
+    );
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.status(200).json({ message: "Comment deleted successfully" });
   } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
     console.error("Error deleting comment:", error);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 };

@@ -1,16 +1,22 @@
-import api from "@/api/axios";
+import api from "../api/axios";
 
-export const getAllPosts = () => {
-  return api.get("");
+export const fetchPosts = () => {
+  return api.get("/posts");
 };
 
-export const createPost = ({
-  title,
-  content,
-  featuredImage,
-  tags,
-  isDraft,
-  status,
-}) => {
-  return api.post("/", tags, content, isDraft, status, featuredImage, title);
+export const fetchPostById = (postId) => {
+  return api.get(`/posts/${postId}`);
 };
+
+export const createPost = (data) => {
+  return api.post("/posts", data);
+};
+
+export const updatePost = (postId, data) => {
+  return api.put(`/posts/${postId}`, data);
+};
+export const deletePost = (postId) => {
+  return api.delete(`/posts/${postId}`);
+};
+
+export const fetchMyPosts = () => api.get("/posts/me");

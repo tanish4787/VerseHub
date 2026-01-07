@@ -8,6 +8,7 @@ import postRoutes from "./Services/Posts/Posts.Routes.js";
 import userRoutes from "./Services/Users/User.Routes.js";
 import clapRoutes from "./Services/Engagement/Claps.Routes.js";
 import commentRoutes from "./Services/Comments/Comments.Routes.js";
+import bookmarkRoutes from "./Services/Bookmarks/Bookmarks.Routes.js";
 import notificationRoutes from "./Services/Notifications/Notifications.Routes.js";
 
 dotenv.config();
@@ -32,6 +33,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/claps", clapRoutes);
 app.use("/api/comments", commentRoutes);
+app.use("/api/bookmarks", bookmarkRoutes);
 app.use("/api/notifications", notificationRoutes);
 
 app.use((err, req, res, next) => {

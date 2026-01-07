@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Notification from "../../Models/Notification.Model.js";
 
 export const getNotifications = async (req, res) => {
@@ -7,7 +8,7 @@ export const getNotifications = async (req, res) => {
     const notifications = await Notification.find({ recipient: userId })
       .sort({ createdAt: -1 })
       .limit(50)
-      .populate("sourceUser", "username avatar")
+      .populate("sourceUser", "username profilePicture")
       .populate("sourcePost", "title");
 
     return res.status(200).json({ notifications });
@@ -17,14 +18,17 @@ export const getNotifications = async (req, res) => {
   }
 };
 
-
 export const markNotificationRead = async (req, res) => {
   try {
     const userId = req.user._id;
-    const notificationId = req.params.id;
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid notification ID" });
+    }
 
     const notification = await Notification.findOneAndUpdate(
-      { _id: notificationId, recipient: userId },
+      { _id: id, recipient: userId },
       { isRead: true },
       { new: true }
     );
@@ -32,13 +36,16 @@ export const markNotificationRead = async (req, res) => {
     if (!notification) {
       return res.status(404).json({ message: "Notification not found" });
     }
-    return res.status(200).json({ message: "Notification marked as read" });
+
+    return res.status(200).json({
+      message: "Notification marked as read",
+      notification,
+    });
   } catch (error) {
     console.error("Error marking notification as read:", error);
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
-
 
 export const markAllNotificationsRead = async (req, res) => {
   try {
@@ -58,7 +65,6 @@ export const markAllNotificationsRead = async (req, res) => {
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
-
 
 export const deleteNotification = async (req, res) => {
   try {
@@ -99,10 +105,10 @@ export const clearAllNotifications = async (req, res) => {
   }
 };
 
-
 export const getUnreadCount = async (req, res) => {
   try {
     const userId = req.user._id;
+
     const count = await Notification.countDocuments({
       recipient: userId,
       isRead: false,
@@ -114,6 +120,3 @@ export const getUnreadCount = async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 };
-
-
-

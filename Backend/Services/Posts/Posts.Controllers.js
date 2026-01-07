@@ -112,20 +112,25 @@ export const updatePost = async (req, res) => {
       return res.status(403).json({ error: "Unauthorized access" });
     }
 
-    const updatableFields = [
-      "title",
-      "content",
-      "tags",
-      "featuredImage",
-      "isDraft",
-      "status",
-    ];
+    
+    const updatableFields = ["title", "content", "tags", "featuredImage"];
 
     updatableFields.forEach((field) => {
       if (req.body[field] !== undefined) {
         post[field] = req.body[field];
       }
     });
+
+   
+    if (req.body.isDraft === false) {
+      post.isDraft = false;
+      post.status = "published";
+    }
+
+    if (req.body.isDraft === true) {
+      post.isDraft = true;
+      post.status = "draft";
+    }
 
     const updatedPost = await post.save();
 
@@ -138,7 +143,6 @@ export const updatePost = async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 };
-
 
 export const deletePost = async (req, res) => {
   try {
@@ -205,5 +209,17 @@ export const getPostsByTag = async (req, res) => {
   } catch (error) {
     console.error("Error fetching posts by tag:", error);
     res.status(500).json({ error: "Server error" });
+  }
+};
+export const getMyPosts = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const posts = await Post.find({ author: userId }).sort({ createdAt: -1 });
+
+    res.status(200).json({ posts });
+  } catch (error) {
+    console.error("Error fetching my posts:", error);
+    res.status(500).json({ error: "Failed to fetch your posts" });
   }
 };

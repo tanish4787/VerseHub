@@ -23,6 +23,9 @@ export default function Header() {
           <Button size="sm" variant="ghost" as={Link} to="/">
             Home
           </Button>
+          <Button size="sm" colorScheme="blue" as={Link} to="/posts/new">
+            Write
+          </Button>
 
           {user && (
             <>

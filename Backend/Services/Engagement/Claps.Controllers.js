@@ -3,97 +3,93 @@ import Post from "../../Models/Post.Model.js";
 import Clap from "../../Models/Clap.Model.js";
 import Notification from "../../Models/Notification.Model.js";
 
+export const toggleClap = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-
-export const addClap = async (req, res) => {
   try {
     const { postId } = req.params;
     const userId = req.user._id;
 
     if (!mongoose.Types.ObjectId.isValid(postId)) {
-      return res.status(404).json({ message: "Invalid Post Id" });
+      return res.status(400).json({ message: "Invalid Post ID" });
     }
 
-    const post = await Post.findById(postId);
+    const post = await Post.findById(postId).session(session);
     if (!post) {
-      return res.status(404).json({ message: "Post not Found" });
+      return res.status(404).json({ message: "Post not found" });
     }
 
-    const existingClap = await Clap.findOne({ post: postId, user: userId });
-    if (existingClap) {
-      return res.status(409).json({ message: "Already Clapped." });
-    }
-
-    await Clap.create({ post: postId, user: userId });
-    await Post.findByIdAndUpdate(postId, { $inc: { clapsCount: 1 } });
-
-    if (String(post.author) !== String(userId)) {
-      await Notification.create({
-        recipient: post.author,
-        sourceUser: userId,
-        sourcePost: postId,
-        type: "new_clap",
-        message: `${req.user.name} clapped your post.`,
-      });
-    }
-
-    return res.status(201).json({ message: "Clapped Successfully" });
-  } catch (error) {
-    console.error("Error:", error);
-    return res.status(500).json({ message: "Internal Server Error." });
-  }
-};
-
-export const removeClap = async (req, res) => {
-  try {
-    const { postId } = req.params;
-    const userId = req.user._id;
-
-    if (!mongoose.Types.ObjectId.isValid(postId)) {
-      return res.status(409).json({ message: "Invalid Post Id" });
-    }
-
-    const post = await Post.findById(postId);
-    if (!post) {
-      return res.status(404).json({ message: "Post not Found" });
-    }
-
-    const deletedClap = await Clap.findOneAndDelete({
+    const existingClap = await Clap.findOne({
       post: postId,
       user: userId,
-    });
+    }).session(session);
 
-    if (!deletedClap) {
-      return res.status(404).json({ message: "You haven't clapped this post" });
+    let hasClapped;
+    let clapsDelta;
+
+    if (existingClap) {
+      await existingClap.deleteOne({ session });
+      clapsDelta = -1;
+      hasClapped = false;
+    } else {
+      await Clap.create([{ post: postId, user: userId }], { session });
+      clapsDelta = 1;
+      hasClapped = true;
+
+      if (String(post.author) !== String(userId)) {
+        await Notification.create(
+          [
+            {
+              recipient: post.author,
+              sourceUser: userId,
+              sourcePost: postId,
+              type: "new_clap",
+              message: `${req.user.name} clapped your post.`,
+            },
+          ],
+          { session }
+        );
+      }
     }
 
-    await Post.findByIdAndUpdate(postId, { $inc: { clapsCount: -1 } });
-    return res.status(201).json({ message: "Removed Clap Successfully" });
+    const updatedPost = await Post.findByIdAndUpdate(
+      postId,
+      { $inc: { clapsCount: clapsDelta } },
+      { new: true, session }
+    );
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.status(200).json({
+      hasClapped,
+      clapsCount: updatedPost.clapsCount,
+    });
   } catch (error) {
-    console.error("Error:", error);
-    return res.status(500).json({ message: "Internal Server Error." });
+    await session.abortTransaction();
+    session.endSession();
+    console.error("Error toggling clap:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
 export const getPostClaps = async (req, res) => {
   try {
     const { postId } = req.params;
-    const userId = req.user?._id;
+    const userId = req.user._id;
 
     if (!mongoose.Types.ObjectId.isValid(postId)) {
       return res.status(400).json({ message: "Invalid Post ID" });
     }
 
     const totalClaps = await Clap.countDocuments({ post: postId });
+    const userClap = await Clap.findOne({ post: postId, user: userId });
 
-    let hasClapped = false;
-
-    if (userId) {
-      const userClap = await Clap.findOne({ post: postId, user: userId });
-      hasClapped = !!userClap;
-    }
-
-    return res.status(200).json({ total: totalClaps, hasClapped });
+    return res.status(200).json({
+      total: totalClaps,
+      hasClapped: !!userClap,
+    });
   } catch (error) {
     console.error("Error in getPostClaps:", error);
     return res.status(500).json({ message: "Internal Server Error" });
