@@ -6,10 +6,14 @@ import Login from "@/pages/Login";
 import CreatePost from "@/pages/CreatePost";
 import EditPost from "@/pages/EditPost";
 import PostDetail from "@/pages/PostDetail";
+import UserProfile from "@/pages/UserProfile";
+
 
 import ProtectedRoute from "../components/ProtectedRoute";
 import MainLayout from "../components/Layouts/MainLayout";
 import MyPosts from "@/pages/MyPosts";
+import Bookmarks from "@/pages/Bookmarks";
+
 
 const AppRoutes = () => {
   return (
@@ -25,13 +29,17 @@ const AppRoutes = () => {
         }
       >
         <Route path="/" element={<Home />} />
-        <Route path="/posts/my-post" element={<MyPosts />} />
+        <Route path="/posts/my-posts" element={<MyPosts />} />
         <Route path="/posts/new" element={<CreatePost />} />
         <Route path="/posts/:postId" element={<PostDetail />} />
         <Route path="/posts/:postId/edit" element={<EditPost />} />
+        <Route path="/bookmarks" element={<Bookmarks />} />
+        <Route path="/users/:userId" element={<UserProfile />} />
+
       </Route>
     </Routes>
   );
 };
 
 export default AppRoutes;
+ 

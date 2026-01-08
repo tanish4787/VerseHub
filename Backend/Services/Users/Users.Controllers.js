@@ -154,3 +154,33 @@ export const toggleFollow = async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 };
+
+export const getFollowStatus = async (req, res) => {
+  try {
+    const currentUserId = req.user._id;
+    const targetUserId = req.params.userId;
+
+    if (!mongoose.Types.ObjectId.isValid(targetUserId)) {
+      return res.status(400).json({ error: "Invalid user ID" });
+    }
+
+    const currentUser = await User.findById(currentUserId).select("following");
+    const targetUser = await User.findById(targetUserId).select("followers");
+
+    if (!currentUser || !targetUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const isFollowing = currentUser.following.some(
+      (id) => String(id) === String(targetUserId)
+    );
+
+    return res.status(200).json({
+      isFollowing,
+      followersCount: targetUser.followers.length,
+    });
+  } catch (error) {
+    console.error("Error getting follow status:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};

@@ -42,7 +42,7 @@ export const createPost = async (req, res) => {
 
 export const getAllPosts = async (req, res) => {
   try {
-    const { tag, search } = req.query;
+    const { tag, search, page = 1, limit = 10 } = req.query;
 
     let query = { status: "published" };
 
@@ -57,11 +57,23 @@ export const getAllPosts = async (req, res) => {
       ];
     }
 
-    const posts = await Post.find(query)
-      .sort({ createdAt: -1 })
-      .select("-content");
+    const skip = (Number(page) - 1) * Number(limit);
 
-    res.status(200).json({ posts });
+    const [posts, total] = await Promise.all([
+      Post.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit))
+        .select("-content"),
+      Post.countDocuments(query),
+    ]);
+
+    return res.status(200).json({
+      posts,
+      total,
+      page: Number(page),
+      totalPages: Math.ceil(total / limit),
+    });
   } catch (error) {
     console.error("Get all posts error:", error);
     res.status(500).json({ error: "Failed to fetch posts" });
@@ -112,7 +124,6 @@ export const updatePost = async (req, res) => {
       return res.status(403).json({ error: "Unauthorized access" });
     }
 
-    
     const updatableFields = ["title", "content", "tags", "featuredImage"];
 
     updatableFields.forEach((field) => {
@@ -121,7 +132,6 @@ export const updatePost = async (req, res) => {
       }
     });
 
-   
     if (req.body.isDraft === false) {
       post.isDraft = false;
       post.status = "published";
@@ -221,5 +231,19 @@ export const getMyPosts = async (req, res) => {
   } catch (error) {
     console.error("Error fetching my posts:", error);
     res.status(500).json({ error: "Failed to fetch your posts" });
+  }
+};
+
+export const getTrendingPosts = async (req, res) => {
+  try {
+    const posts = await Post.find({ status: "published" })
+      .sort({ clapsCount: -1, commentsCount: -1 })
+      .limit(10)
+      .select("-content");
+
+    return res.status(200).json({ posts });
+  } catch (error) {
+    console.error("Get trending posts error:", error);
+    res.status(500).json({ error: "Failed to fetch trending posts" });
   }
 };

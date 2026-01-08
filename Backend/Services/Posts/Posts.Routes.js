@@ -9,12 +9,14 @@ import {
   getPostsByTag,
   getPostsByUser,
   getMyPosts,
+  getTrendingPosts
 } from "./Posts.Controllers.js";
 
 const router = express.Router();
 
 router
   .get("/", getAllPosts)
+  .get("/trending", getTrendingPosts)
   .get("/me", protectedRoute, getMyPosts)
   .post("/", protectedRoute, createPost)
 

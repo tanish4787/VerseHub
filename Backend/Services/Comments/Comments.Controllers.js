@@ -3,6 +3,29 @@ import Post from "../../Models/Post.Model.js";
 import Comment from "../../Models/Comment.Model.js";
 import Notification from "../../Models/Notification.Model.js";
 
+export const getCommentsByPost = async (req, res) => {
+  try {
+    const { postId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(postId)) {
+      return res.status(400).json({ error: "Invalid Post ID" });
+    }
+
+    const comments = await Comment.find({ post: postId })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.status(200).json({ comments });
+  } catch (error) {
+    console.error("Error fetching comments:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+
+
+
+
 export const addComment = async (req, res) => {
   try {
     const { postId } = req.params;

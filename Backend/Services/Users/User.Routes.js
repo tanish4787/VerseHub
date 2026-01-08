@@ -2,6 +2,7 @@ import express from "express";
 import { protectedRoute } from "../Auth/Auth.Middlewares.js";
 import {
   getUser,
+  getFollowStatus,
   updateUserProfile,
   toggleFollow,
 } from "./Users.Controllers.js";
@@ -11,5 +12,7 @@ router.get("/:userId", getUser);
 router.put("/profile", protectedRoute, updateUserProfile);
 router.post("/:userId/follow", protectedRoute, toggleFollow);
 router.post("/:userId/unfollow", protectedRoute, toggleFollow);
+
+router.get("/:userId/follow-status", protectedRoute, getFollowStatus);
 
 export default router;

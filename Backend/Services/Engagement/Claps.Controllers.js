@@ -77,19 +77,23 @@ export const toggleClap = async (req, res) => {
 export const getPostClaps = async (req, res) => {
   try {
     const { postId } = req.params;
-    const userId = req.user._id;
+
+    const userId = req.user?._id;
 
     if (!mongoose.Types.ObjectId.isValid(postId)) {
       return res.status(400).json({ message: "Invalid Post ID" });
     }
 
     const totalClaps = await Clap.countDocuments({ post: postId });
-    const userClap = await Clap.findOne({ post: postId, user: userId });
 
-    return res.status(200).json({
-      total: totalClaps,
-      hasClapped: !!userClap,
-    });
+    let hasClapped = false;
+
+    if (userId) {
+      const userClap = await Clap.findOne({ post: postId, user: userId });
+      hasClapped = !!userClap;
+    }
+
+    return res.status(200).json({ total: totalClaps, hasClapped });
   } catch (error) {
     console.error("Error in getPostClaps:", error);
     return res.status(500).json({ message: "Internal Server Error" });
