@@ -1,55 +1,95 @@
-import { useForm } from "react-hook-form";
-import { Input, Button, Box, Heading } from "@chakra-ui/react";
-import  useAuthStore  from "../stores/auth.store";
-import { useNavigate } from "react-router-dom";
-import { loginUser } from "../services/auth.service";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Input, Button, Text, Box } from "@chakra-ui/react";
+import AuthLayout from "@/components/Layouts/AuthLayout";
+import { loginUser } from "@/services/auth.service";
+import useAuthStore from "@/stores/auth.store";
 
-export default function Login() {
-  const { register, handleSubmit } = useForm();
+const Login = () => {
   const navigate = useNavigate();
-  const auth = useAuthStore();
+  const { loginSuccess } = useAuthStore();
 
-  const onSubmit = async (data) => {
+  const [form, setForm] = useState({ email: "", password: "" });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
     try {
-      auth.loginStart();
-      const res = await loginUser(data);
-      auth.loginSuccess(res.data);
+      const res = await loginUser(form);
+      loginSuccess({ user: res.data.user, token: res.data.token });
       navigate("/");
     } catch (err) {
-      console.error("Error while loggin in: ", err);
-      auth.loginFailure("Invalid credentials");
+      setError(err.response?.data?.error || "Login failed");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <Box maxW="md" mx="auto" mt="20">
-      <Heading mb="6">Login</Heading>
+    <AuthLayout>
+      <Text className="text-2xl font-semibold mb-1 text-center">
+        Welcome back
+      </Text>
+      <Text className="text-sm text-gray-500 mb-6 text-center">
+        Log in to continue to VerseHub
+      </Text>
 
-      <form onSubmit={handleSubmit(onSubmit)}>
+      {error && (
+        <Box className="mb-4 text-sm text-red-600 bg-red-50 p-2 rounded">
+          {error}
+        </Box>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-4">
         <Input
           placeholder="Email"
-          mb="4"
-          {...register("email", { required: true })}
+          name="email"
+          type="email"
+          value={form.email}
+          onChange={handleChange}
+          required
         />
-
-       
 
         <Input
-          type="password"
           placeholder="Password"
-          mb="4"
-          {...register("password", { required: true })}
+          name="password"
+          type="password"
+          value={form.password}
+          onChange={handleChange}
+          required
         />
+        <Text className="text-sm text-right">
+          <Link to="/forgot-password" className="text-black hover:underline">
+            Forgot password?
+          </Link>
+        </Text>
 
         <Button
           type="submit"
-          colorScheme="blue"
-          width="100%"
-          isLoading={auth.loading}
+          width="full"
+          isLoading={loading}
+          className="bg-black text-white hover:bg-gray-800"
         >
           Login
         </Button>
       </form>
-    </Box>
+
+      <Text className="text-sm text-gray-600 mt-6 text-center">
+        Don’t have an account?{" "}
+        <Link to="/register" className="text-black font-medium hover:underline">
+          Sign up
+        </Link>
+      </Text>
+    </AuthLayout>
   );
-}
+};
+
+export default Login;

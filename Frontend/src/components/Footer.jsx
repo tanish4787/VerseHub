@@ -1,17 +1,16 @@
-import { Box, Text } from "@chakra-ui/react"
+import { Box, Text, Flex } from "@chakra-ui/react";
 
-export default function Footer() {
+const Footer = () => {
   return (
-    <Box
-      bg="gray.100"
-      py="4"
-      mt="auto"
-      borderTop="1px solid"
-      borderColor="gray.200"
-    >
-      <Text textAlign="center" fontSize="sm" color="gray.600">
-        © {new Date().getFullYear()} VerseHub
-      </Text>
-    </Box>
-  )
-}
+    <div className="hidden md:block border-b bg-white sticky top-0 z-50">
+      <Box className="border-t mt-10 py-6 bg-gray-50">
+        <Flex className="max-w-6xl mx-auto px-4 justify-between text-sm text-gray-600">
+          <Text>© {new Date().getFullYear()} VerseHub</Text>
+          <Text>Built by Tanish K.</Text>
+        </Flex>
+      </Box>
+    </div>
+  );
+};
+
+export default Footer;

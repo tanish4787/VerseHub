@@ -1,42 +1,48 @@
-import { Link } from "react-router-dom";
-import { Box, Flex, Button, Avatar } from "@chakra-ui/react";
-import useAuthStore from "../stores/auth.store";
+import { Link, useNavigate } from "react-router-dom";
+import { Box, Button, Flex, Text } from "@chakra-ui/react";
+import useAuthStore from "@/stores/auth.store";
 
-export default function Header() {
-  const { user, logout } = useAuthStore();
+const Header = () => {
+  const { isAuthenticated, user, logout } = useAuthStore();
+  const navigate = useNavigate();
 
   return (
-    <Box bg="white" borderBottom="1px solid" borderColor="gray.200">
-      <Flex
-        maxW="1200px"
-        mx="auto"
-        px="4"
-        py="3"
-        align="center"
-        justify="space-between"
-      >
-        <Link to="/">
-          <strong>VerseHub</strong>
-        </Link>
+    <div className="hidden md:block border-b bg-white sticky top-0 z-50">
+      <Box className="border-b bg-white sticky top-0 z-50">
+        <Flex className="max-w-6xl mx-auto px-4 py-3 items-center justify-between">
+          <Link to="/">
+            <Text className="text-xl font-bold">VerseHub</Text>
+          </Link>
 
-        <Flex align="center" gap="3">
-          <Button size="sm" variant="ghost" as={Link} to="/">
-            Home
-          </Button>
-          <Button size="sm" colorScheme="blue" as={Link} to="/posts/new">
-            Write
-          </Button>
+          <Flex className="items-center gap-4">
+            {isAuthenticated && (
+              <>
+                <Link to="/">Home</Link>
+                <Link to="/posts/my-posts">My Posts</Link>
+                <Link to="/bookmarks">Bookmarks</Link>
+              </>
+            )}
 
-          {user && (
-            <>
-              <Avatar size="sm" name={user.username} />
-              <Button size="sm" colorScheme="red" onClick={logout}>
-                Logout
-              </Button>
-            </>
-          )}
+            {!isAuthenticated ? (
+              <>
+                <Link to="/login">Login</Link>
+                <Button size="sm" onClick={() => navigate("/register")}>
+                  Get Started
+                </Button>
+              </>
+            ) : (
+              <>
+                <Link to={`/users/${user?._id}`}>{user?.username}</Link>
+                <Button size="sm" variant="outline" onClick={logout}>
+                  Logout
+                </Button>
+              </>
+            )}
+          </Flex>
         </Flex>
-      </Flex>
-    </Box>
+      </Box>
+    </div>
   );
-}
+};
+
+export default Header;

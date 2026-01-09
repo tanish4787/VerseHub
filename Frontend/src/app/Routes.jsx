@@ -7,6 +7,7 @@ import CreatePost from "@/pages/CreatePost";
 import EditPost from "@/pages/EditPost";
 import PostDetail from "@/pages/PostDetail";
 import UserProfile from "@/pages/UserProfile";
+import ForgotPassword from "@/pages/ForgotPassword";
 
 
 import ProtectedRoute from "../components/ProtectedRoute";
@@ -20,6 +21,8 @@ const AppRoutes = () => {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+
 
       <Route
         element={
@@ -35,6 +38,7 @@ const AppRoutes = () => {
         <Route path="/posts/:postId/edit" element={<EditPost />} />
         <Route path="/bookmarks" element={<Bookmarks />} />
         <Route path="/users/:userId" element={<UserProfile />} />
+
 
       </Route>
     </Routes>
